@@ -11,12 +11,21 @@ import (
 	fp "path/filepath"
 )
 
+//ImgAver :
+type ImgAver struct {
+	Name string
+	R    int
+	G    int
+	B    int
+	A    int
+}
+
 //ImgInfo : RGBA
 type ImgInfo struct {
 	R int
 	G int
 	B int
-	A int
+	A in
 }
 
 //DIFFTHRESH  :
