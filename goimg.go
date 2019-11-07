@@ -13,7 +13,7 @@ import (
 func main() {
 	argsLen := len(os.Args)
 	if argsLen == 1 {
-		fmt.Println("common")
+		fmt.Println("put your command")
 	} else if argsLen == 2 && os.Args[1] == "help" {
 		fmt.Println(" diff : get diff image")
 		fmt.Println(" info : get info CSV and JSON")
