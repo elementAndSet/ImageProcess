@@ -86,11 +86,12 @@ func MkDir(fdn string) string {
 			fdnFlag = stringCheck(wkfdSlcBase, FDN)
 		}
 	}
-	fmt.Println("FDN : ", FDN)
+	
 	mkDirErr := os.Mkdir(FDN, 0777)
 	if mkDirErr != nil {
-		return "MkDir Error"
+		panic(mkDirErr)
 	}
+	fmt.Println(" Make New Folder -> ", FDN)
 	return FDN
 }
 
