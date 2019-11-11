@@ -244,6 +244,24 @@ func GetIrregDiff(D [][]float64, Threshold float64) [][]float64 {
 	return irregDiff
 }
 
+//DrawFromNRGBA :
+func DrawFromNRGBA(name, extsn string, info *image.NRGBA) {
+	nameAndExtsn := name + "." + extsn
+	f, ferr := os.Create(nameAndExtsn)
+	if ferr != nil {
+		panic(ferr)
+	}
+	if extsn == "jpeg" {
+		jpegOption := jpeg.Options{
+			Quality: 100,
+		}
+		jpeg.Encode(f, info, &jpegOption)
+	} else if extsn == "png" {
+		png.Encode(f, info)
+	}
+}
+
+
 // DrawJPEGImg :
 func DrawJPEGImg(fn string, info [][]ImgInfo) {
 	f, fErr := os.Create(fn)
@@ -395,4 +413,149 @@ func MakeImgFromYIrreg(Irreg [][]float64) [][]ImgInfo {
 		}
 	}
 	return linestack
+}
+
+//MakeGraphBlueprint :
+func MakeGraphBlueprint(fn string, info [][]ImgInfo) (*image.NRGBA, *image.NRGBA, *image.NRGBA) {
+	//path, _ := os.Getwd()
+	/*
+		name, extsn := mp.GetFileNameAndExtsn(fn)
+		fmt.Println("name : ", name)
+		fmt.Println("extsn : ", extsn)
+		newNameRG := name + "_RG_graph" + extsn
+		newNameGB := name + "_GB_graph" + extsn
+		newNameRB := name + "_RB_graph" + extsn
+
+			fRG, errRG := os.Create(newNameRG)
+			if errRG != nil {
+				panic(errRG)
+			}
+			defer fRG.Close()
+			fGB, errGB := os.Create(newNameGB)
+			if errGB != nil {
+				panic(errGB)
+			}
+			defer fGB.Close()
+			fRB, errRB := os.Create(newNameRB)
+			if errRB != nil {
+				panic(errRB)
+			}
+			defer fRB.Close()
+	*/
+
+	RGgraph := image.NewNRGBA(image.Rect(0, 0, 255, 255))
+	for i := 0; i < 256; i++ {
+		for j := 0; j < 256; j++ {
+			RGgraph.Set(i, j, color.NRGBA{
+				R: (uint8)(i),
+				G: 255 - (uint8)(j),
+				B: 0,
+				A: 192,
+			})
+		}
+	}
+	GBgraph := image.NewNRGBA(image.Rect(0, 0, 255, 255))
+	for i := 0; i < 256; i++ {
+		for j := 0; j < 256; j++ {
+			GBgraph.Set(i, j, color.NRGBA{
+				R: 0,
+				G: (uint8)(j),
+				B: 255 - (uint8)(j),
+				A: 192,
+			})
+		}
+	}
+	RBgraph := image.NewNRGBA(image.Rect(0, 0, 255, 255))
+	for i := 0; i < 256; i++ {
+		for j := 0; j < 256; j++ {
+			RBgraph.Set(i, j, color.NRGBA{
+				R: (uint8)(i),
+				G: 0,
+				B: 255 - (uint8)(j),
+				A: 192,
+			})
+		}
+	}
+	for _, line := range info {
+		for _, pixel := range line {
+			RGgraph.Set(pixel.R/256, 255-pixel.G/256, color.NRGBA{
+				R: 255,
+				G: 255,
+				B: 0,
+				A: 255,
+			})
+			GBgraph.Set(pixel.G/256, 255-pixel.B/256, color.NRGBA{
+				R: 0,
+				G: 255,
+				B: 255,
+				A: 255,
+			})
+			RBgraph.Set(pixel.R/256, 255-pixel.B/256, color.NRGBA{
+				R: 255,
+				G: 0,
+				B: 255,
+				A: 255,
+			})
+		}
+	}
+	/*
+		if extsn == ".jpeg" || extsn == ".jpg" || extsn == ".JPG" {
+			option := jpeg.Options{
+				Quality: 100,
+			}
+			jpeg.Encode(fRG, RGgraph, &option)
+			jpeg.Encode(fGB, GBgraph, &option)
+			jpeg.Encode(fRB, RBgraph, &option)
+		} else if extsn == ".png" {
+			png.Encode(fRG, RGgraph)
+			png.Encode(fGB, GBgraph)
+			png.Encode(fRB, RBgraph)
+		}
+	*/
+	return RGgraph, GBgraph, RGgraph
+}
+
+//ReturnNRGBA : get each pixel RGBA infomation
+func ReturnNRGBA(fn, fm string) *image.NRGBA {
+	f, fErr := os.Open(fn)
+	if fErr != nil {
+		log.Fatal(fErr)
+	}
+	defer f.Close()
+	var imgInfo image.Image
+	var imgErr error
+	if fm == "png" {
+		imgInfo, imgErr = png.Decode(f)
+	} else if fm == "jpeg" {
+		imgInfo, imgErr = jpeg.Decode(f)
+	} else {
+	}
+	if imgErr != nil {
+		fmt.Println("img Err")
+		log.Fatal(imgErr)
+
+	}
+	xSize, ySize := imgInfo.Bounds().Max.X, imgInfo.Bounds().Max.Y
+	NRGBA := image.NewNRGBA(image.Rect(0, 0, xSize, ySize))
+	for j := 0; j < ySize; j++ {
+		for i := 0; i < xSize; i++ {
+			NRGBA.Set(i, j, imgInfo.At(i, j))
+		}
+	}
+	return NRGBA
+}
+
+//ReturnRGBAAverage : get Average RGBA information from [][]ImgInfo structure
+func ReturnRGBAAverage(NRGBA *image.NRGBA) (int, int, int, int) {
+	xSize, ySize := NRGBA.Bounds().Max.X, NRGBA.Bounds().Max.Y
+	fullSize := xSize * ySize
+	var R, G, B, A float64
+	for i := 0; i < xSize; i++ {
+		for j := 0; j < ySize; j++ {
+			r, g, b, a := NRGBA.At(i, j).RGBA()
+			R, G, B, A = R+(float64)(r/256), G+(float64)(g/256), B+(float64)(b/256), A+(float64)(a/256)
+		}
+	}
+	R, G, B, A = R/(float64)(fullSize), G/(float64)(fullSize), B/(float64)(fullSize), A/(float64)(fullSize)
+	return (int)(R), (int)(G), (int)(B), (int)(A)
 }
