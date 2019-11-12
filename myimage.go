@@ -7,17 +7,20 @@ import (
 	"image/jpeg"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	fp "path/filepath"
 )
 
 //ImgAver :
 type ImgAver struct {
-	Name string
-	R    int
-	G    int
-	B    int
-	A    int
+	Name  string
+	R     int
+	G     int
+	B     int
+	A     int
+	XDiff float64
+	YDiff float64
 }
 
 //ImgInfo : RGBA
@@ -25,7 +28,15 @@ type ImgInfo struct {
 	R int
 	G int
 	B int
-	A in
+	A int
+}
+
+//RGBA :
+type RGBA struct {
+	R int
+	G int
+	B int
+	A int
 }
 
 //DIFFTHRESH  :
@@ -188,7 +199,7 @@ func GetDiffInfo(info [][]ImgInfo) ([][]float64, [][]float64) {
 		for i := 0; i < xLen-1; i++ {
 			r, g := v[i].R-v[i+1].R, v[i].G-v[i+1].G
 			b, a := v[i].B-v[i+1].B, v[i].A-v[i+1].A
-			xDiffSq := (float64)(r*r + g*g + b*b + a*a)
+			xDiffSq := math.Sqrt((float64)(r*r + g*g + b*b + a*a))
 			xDiffXAxis = append(xDiffXAxis, xDiffSq)
 		}
 		xDiff = append(xDiff, xDiffXAxis)
@@ -199,7 +210,7 @@ func GetDiffInfo(info [][]ImgInfo) ([][]float64, [][]float64) {
 		for j := 0; j < yLen-1; j++ {
 			r, g := info[j][i].R-info[j+1][i].R, info[j][i].G-info[j+1][i].G
 			b, a := info[j][i].B-info[j+1][i].B, info[j][i].A-info[j+1][i].A
-			yDiffSq := (float64)(r*r + g*g + b*b + a*a)
+			yDiffSq := math.Sqrt((float64)(r*r + g*g + b*b + a*a))
 			yDiffYAxis = append(yDiffYAxis, yDiffSq)
 		}
 		yDiff = append(yDiff, yDiffYAxis)
@@ -260,7 +271,6 @@ func DrawFromNRGBA(name, extsn string, info *image.NRGBA) {
 		png.Encode(f, info)
 	}
 }
-
 
 // DrawJPEGImg :
 func DrawJPEGImg(fn string, info [][]ImgInfo) {
@@ -498,20 +508,7 @@ func MakeGraphBlueprint(fn string, info [][]ImgInfo) (*image.NRGBA, *image.NRGBA
 			})
 		}
 	}
-	/*
-		if extsn == ".jpeg" || extsn == ".jpg" || extsn == ".JPG" {
-			option := jpeg.Options{
-				Quality: 100,
-			}
-			jpeg.Encode(fRG, RGgraph, &option)
-			jpeg.Encode(fGB, GBgraph, &option)
-			jpeg.Encode(fRB, RBgraph, &option)
-		} else if extsn == ".png" {
-			png.Encode(fRG, RGgraph)
-			png.Encode(fGB, GBgraph)
-			png.Encode(fRB, RBgraph)
-		}
-	*/
+
 	return RGgraph, GBgraph, RGgraph
 }
 
@@ -558,4 +555,124 @@ func ReturnRGBAAverage(NRGBA *image.NRGBA) (int, int, int, int) {
 	}
 	R, G, B, A = R/(float64)(fullSize), G/(float64)(fullSize), B/(float64)(fullSize), A/(float64)(fullSize)
 	return (int)(R), (int)(G), (int)(B), (int)(A)
+}
+
+//ReturnDiffInfo : get horizontal diff infomation and vertical diff infomation
+func ReturnDiffInfo(info *image.NRGBA) ([][]RGBA, [][]RGBA) {
+	MaxX, MaxY := info.Bounds().Max.X, info.Bounds().Max.Y
+	var xDiff, yDiff [][]RGBA
+
+	for j := 0; j < MaxY; j++ {
+		var xDiffHorizontal []RGBA
+		for i := 0; i < MaxX-1; i++ {
+			r0, g0, b0, a0 := info.At(i, j).RGBA()
+			r, g, b, a := info.At(i+1, j).RGBA()
+			R := (int)(r0/256) - (int)(r/256)
+			G := (int)(g0/256) - (int)(g/256)
+			B := (int)(b0/256) - (int)(b/256)
+			A := (int)(a0/256) - (int)(a/256)
+			rgba := RGBA{R, G, B, A}
+			xDiffHorizontal = append(xDiffHorizontal, rgba)
+		}
+		xDiff = append(xDiff, xDiffHorizontal)
+	}
+
+	for i := 0; i < MaxX; i++ {
+		var yDiffVertical []RGBA
+		for j := 0; j < MaxY-1; j++ {
+			r0, g0, b0, a0 := info.At(i, j).RGBA()
+			r, g, b, a := info.At(i, j+1).RGBA()
+			R := (int)(r0/256) - (int)(r/256)
+			G := (int)(g0/256) - (int)(g/256)
+			B := (int)(b0/256) - (int)(b/256)
+			A := (int)(a0/256) - (int)(a/256)
+			rgba := RGBA{R, G, B, A}
+			yDiffVertical = append(yDiffVertical, rgba)
+		}
+		yDiff = append(yDiff, yDiffVertical)
+	}
+
+	return xDiff, yDiff
+}
+
+//ReturnDiffSquareInfo :
+func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]float64, float64) {
+	var SX, SY, S float64
+	var SqX, SqY [][]float64
+	Xs, Ys := len(xDiff)*len(xDiff[0]), len(yDiff)*len(yDiff[0])
+	for _, V := range xDiff {
+		var xHorizon []float64
+		for _, v := range V {
+			S = math.Sqrt((float64)(v.R*v.R + v.G*v.G + v.B*v.B + v.A*v.A))
+			SX = SX + S
+			xHorizon = append(xHorizon, S)
+			//SqX[mut1][mut2] = S
+			//mut2++
+		}
+		SqX = append(SqX, xHorizon)
+	}
+	for _, V := range yDiff {
+		var yVertical []float64
+		for _, v := range V {
+			S = math.Sqrt((float64)(v.R*v.R + v.G*v.G + v.B*v.B + v.A*v.A))
+			SY = SY + S
+			yVertical = append(yVertical, S)
+		}
+		SqY = append(SqY, yVertical)
+	}
+	return SqX, SqY, (SX / (float64)(Xs)) + (SY / (float64)(Ys))
+}
+
+// ReturnSimplify :
+func ReturnSimplify(info [][]float64, Threshold float64) {
+	var mut int
+	for _, V := range info {
+		for index := 0; index < len(V)-1; index++ {
+			if V[index] > Threshold {
+				mut = index
+				for V[mut+1] > Threshold && mut+1 < len(V) {
+					mut++
+				}
+			}
+		}
+	}
+}
+
+//ReturnIrregDiffImg : check diff degree over or not over your Threshold
+func ReturnIrregDiffImg(xInfo, yInfo [][]float64, Threshold float64) *image.NRGBA {
+
+	_, xYLen, yXLen, _ := len(xInfo[0]), len(xInfo), len(yInfo), len(yInfo[0])
+	diffImg := image.NewNRGBA(image.Rect(0, 0, yXLen, xYLen))
+	var mutX, mutY int
+
+	mutX, mutY = 0, 0
+	for _, V := range yInfo {
+		for _, v := range V {
+			if v > Threshold {
+				diffImg.Set(mutX, mutY, color.NRGBA{
+					B: 255,
+					A: 255,
+				})
+			}
+			mutY++
+		}
+		mutY = 0
+		mutX++
+
+	}
+	mutX, mutY = 0, 0
+	for _, V := range xInfo {
+		for _, v := range V {
+			if v > Threshold {
+				diffImg.Set(mutX, mutY, color.NRGBA{
+					R: 255,
+					A: 255,
+				})
+			}
+			mutX++
+		}
+		mutX = 0
+		mutY++
+	}
+	return diffImg
 }
