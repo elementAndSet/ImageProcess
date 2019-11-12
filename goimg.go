@@ -16,25 +16,29 @@ func main() {
 	if argsLen == 1 {
 		fmt.Println("put your command")
 		fmt.Println(" help : show commands")
-		fmt.Println(" diff [-f0]  : get diff image")
-		fmt.Println(" info [-fo]  : get info CSV and JSON")
+		fmt.Println(" 1Ddiff [-f0]  : get 1D diff info image")
+		fmt.Println(" 2Ddiff [-f0]  : get 2D diff info image")
+		fmt.Println(" info [-f0]  : get info CSV and JSON")
 		fmt.Println(" jpegnum : numbering jpeg format file")
 		fmt.Println(" pngnum : numbering png format file")
 		fmt.Println(" num : numbering jpeg andpng format file")
-		fmt.Println(" graph [-fo] : make Red-Green, Green-Blue, Red-Blue Graph")
+		fmt.Println(" graph [-f0] : make Red-Green, Green-Blue, Red-Blue Graph")
 
 	} else if argsLen == 2 {
 		switch os.Args[1] {
 		case "help":
 			fmt.Println("    -f0 : create new folder and make result file in that")
-			fmt.Println(" diff [-f0]  : get diff image")
-			fmt.Println(" info [-fo]  : get info CSV and JSON")
+			fmt.Println(" 1Ddiff [-f0]  : get 1D diff image")
+			fmt.Println(" 2Ddiff [-f0]  : get 2D diff info image")
+			fmt.Println(" info [-f0]  : get info CSV and JSON")
 			fmt.Println(" jpegnum : numbering jpeg format file")
 			fmt.Println(" pngnum : numbering png format file")
 			fmt.Println(" num : numbering jpeg andpng format file")
-			fmt.Println(" graph [-fo] : make Red-Green, Green-Blue, Red-Blue Graph")
-		case "diff":
-			imgDiffPro("Current")
+			fmt.Println(" graph [-f0] : make Red-Green, Green-Blue, Red-Blue Graph")
+		case "1Ddiff":
+			imgDiff1D("Current")
+		case "2Ddiff":
+			imgDiff2D("Current")
 		case "info":
 			imgInfo("Current")
 		case "jpegnum":
@@ -45,13 +49,18 @@ func main() {
 			imgNum("jpg", "jpeg", "JPG", "png")
 		case "graph":
 			imgGraph("Current")
+		case "test":
+			//fileCp("1.jpg", "1_copy.jpg")
+			test()
 		default:
 			fmt.Println(" wrong command!")
 		}
 	} else if argsLen == 3 && os.Args[2] == "-f0" {
 		switch os.Args[1] {
-		case "diff":
-			imgDiffPro("-f0")
+		case "1Ddiff":
+			imgDiff1D("-f0")
+		case "2Ddiff":
+			imgDiff2D("-f0")
 		case "info":
 			imgInfo("-f0")
 		case "graph":
@@ -59,11 +68,12 @@ func main() {
 		default:
 			fmt.Println(" wrong command!")
 		}
-		fmt.Println(" wrong command!")
 	} else if argsLen == 3 && os.Args[2] == "-f1" {
 		switch os.Args[1] {
-		case "diff":
-			imgDiffPro("-f1")
+		case "1Ddiff":
+			imgDiff1D("-f1")
+		case "2Ddiff":
+			imgDiff2D("-f1")
 		case "graph":
 			imgGraph("-f1")
 		default:
@@ -136,14 +146,37 @@ func imgInfo(option string) {
 	}
 }
 
-func imgDiffPro(option string) {
+func imgDiff2D(option string) {
+	var format string
+	//Path, _ := os.Getwd()
+	//var newFolder, xDiffNewName, yDiffNewName string
+	if option == "-f0" || option == "-f1" {
+		//newFolder = mp.MkDir("NewImg")
+	}
+	for _, v := range mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png") {
+		name, extsn := mp.GetFileNameAndExtsn(v)
+		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
+			format = "jpeg"
+		} else if extsn == ".png" {
+			format = "png"
+		} else {
+			format = extsn
+			continue
+		}
+		xDiff, yDiff := img.ReturnDiffInfo(img.ReturnNRGBA(v, format))
+		xDiffSq, yDiffSq, averSq := img.ReturnDiffSquareInfo(xDiff, yDiff)
+		img.DrawFromNRGBA(name+"_graph", format, img.ReturnIrregDiffImg(xDiffSq, yDiffSq, averSq))
+	}
+}
+
+func imgDiff1D(option string) {
 	var format string
 	Path, _ := os.Getwd()
 	var newFolder, xDiffNewName, yDiffNewName string
 	if option == "-f0" || option == "-f1" {
 		newFolder = mp.MkDir("NewImg")
 	}
-	for _, v := range mp.GetFilePathNameSlice("jpg", "png") {
+	for _, v := range mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png") {
 		Name, extsn := mp.GetFileNameAndExtsn(v)
 		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
 			format = "jpeg"
@@ -178,7 +211,7 @@ func imgDiffPro(option string) {
 			img.DrawPNGImg(yDiffNewName, YIrregImg)
 		}
 		if option == "-f1" {
-			fileCp(v, Path+"\\"+newFolder+Name+"."+format)
+			fileCp(v, Path+"\\"+newFolder+"\\"+Name+"."+format)
 		}
 	}
 }
@@ -219,13 +252,21 @@ func imgGraph(option string) {
 			img.DrawFromNRGBA(newName+"_RBgraph", EXTSN2, RB)
 			if option == "-f1" {
 				newName = np + "\\" + nameAndExtsn
-				fileCp(nameAndExtsn, newName)
+				fileCp(v, newName)
 			}
 		}
 	}
 }
 
+func test() {
+	ex := []int{45, 67, 26, 102}
+	for N, V := range ex {
+		fmt.Println(ex[N], " ", V)
+	}
+}
+
 func fileCp(src, dst string) {
+
 	in, iErr := os.Open(src)
 	if iErr != nil {
 		panic(iErr)
