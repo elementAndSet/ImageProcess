@@ -624,18 +624,22 @@ func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]floa
 }
 
 // ReturnSimplify :
-func ReturnSimplify(info [][]float64, Threshold float64) {
-	var mut int
+func ReturnSimplify(info [][]float64, Threshold float64) [][]float64 {
+	var mut, VLen int
 	for _, V := range info {
-		for index := 0; index < len(V)-1; index++ {
+		VLen = len(V)
+		for index := 0; index < VLen-1; index++ {
 			if V[index] > Threshold {
-				mut = index
-				for V[mut+1] > Threshold && mut+1 < len(V) {
+				mut = 0
+				for V[index+mut] > Threshold && index+mut < VLen-1 {
+					V[index+mut] = 0.0
 					mut++
 				}
+				V[index+(mut/2)] = Threshold + 1.0
 			}
 		}
 	}
+	return info
 }
 
 //ReturnIrregDiffImg : check diff degree over or not over your Threshold
