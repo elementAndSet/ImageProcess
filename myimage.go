@@ -596,7 +596,7 @@ func ReturnDiffInfo(info *image.NRGBA) ([][]RGBA, [][]RGBA) {
 }
 
 //ReturnDiffSquareInfo :
-func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]float64, float64) {
+func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]float64, float64, float64) {
 	var SX, SY, S float64
 	var SqX, SqY [][]float64
 	Xs, Ys := len(xDiff)*len(xDiff[0]), len(yDiff)*len(yDiff[0])
@@ -606,8 +606,6 @@ func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]floa
 			S = math.Sqrt((float64)(v.R*v.R + v.G*v.G + v.B*v.B + v.A*v.A))
 			SX = SX + S
 			xHorizon = append(xHorizon, S)
-			//SqX[mut1][mut2] = S
-			//mut2++
 		}
 		SqX = append(SqX, xHorizon)
 	}
@@ -620,7 +618,7 @@ func ReturnDiffSquareInfo(xDiff [][]RGBA, yDiff [][]RGBA) ([][]float64, [][]floa
 		}
 		SqY = append(SqY, yVertical)
 	}
-	return SqX, SqY, (SX / (float64)(Xs)) + (SY / (float64)(Ys))
+	return SqX, SqY, (SX / (float64)(Xs)), (SY / (float64)(Ys))
 }
 
 // ReturnSimplify :
@@ -644,9 +642,16 @@ func ReturnSimplify(info [][]float64, Threshold float64) [][]float64 {
 
 //ReturnIrregDiffImg : check diff degree over or not over your Threshold
 func ReturnIrregDiffImg(xInfo, yInfo [][]float64, Threshold float64) *image.NRGBA {
-
-	_, xYLen, yXLen, _ := len(xInfo[0]), len(xInfo), len(yInfo), len(yInfo[0])
-	diffImg := image.NewNRGBA(image.Rect(0, 0, yXLen, xYLen))
+	var xSize, ySize int
+	if len(xInfo) != 0 {
+		xSize, ySize = len(xInfo[0])+1, len(xInfo)
+	}
+	if len(yInfo) != 0 {
+		xSize, ySize = len(yInfo), len(yInfo[0])+1
+	}
+	//_, xYLen, yXLen, _ := len(xInfo[0]), len(xInfo), len(yInfo), len(yInfo[0])
+	//diffImg := image.NewNRGBA(image.Rect(0, 0, yXLen, xYLen))
+	diffImg := image.NewNRGBA(image.Rect(0, 0, xSize, ySize))
 	var mutX, mutY int
 
 	mutX, mutY = 0, 0
