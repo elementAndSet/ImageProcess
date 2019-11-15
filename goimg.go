@@ -14,18 +14,18 @@ import (
 
 type commonInfo struct {
 	filename    string
+	imageNRGBA  *image.NRGBA
 	RGBAInfo    img.ImgInfo
 	averR       int
 	averG       int
 	averB       int
 	averA       int
+	xDiff       [][]img.RGBA
+	yDiff       [][]img.RGBA
 	xDiffSq     [][]float64
 	yDiffSq     [][]float64
 	yDiffSqAver float64
 	xDiffSqAver float64
-	imageNRGBA  *image.NRGBA
-	xDiff       [][]img.RGBA
-	yDiff       [][]img.RGBA
 }
 
 //Flags :
@@ -34,9 +34,16 @@ type Flags struct {
 	f1 bool //new folder, origin file
 }
 
-func pseudomain() {
+func main() {
 
 	var commandsList [][]string
+	var objects []commonInfo
+	nameExtsn := mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png", "PNG")
+	for _, v := range nameExtsn {
+		var obj commonInfo
+		obj.filename = v
+		objects = append(objects, obj)
+	}
 	help := func() {
 		fmt.Println("    -f0 : create new folder and make result file in that")
 		fmt.Println(" 1Ddiff [-f0]  : get 1D diff image")
@@ -58,9 +65,33 @@ func pseudomain() {
 				commandsList[len(commandsList)-1] = append(commandsList[len(commandsList)-1], os.Args[mut])
 			}
 		}
+		for _, v := range commandsList {
+			fun := v[0]
+			parameter := append([]string(nil), v[1:]...)
+			switch fun {
+			case "help":
+				help()
+			case "1Ddiff":
+				objects = imgDiff1D(parameter, objects)
+			case "2Ddiff":
+				objects = imgDiff2D(parameter, objects)
+			case "2Dsimple":
+				objects = imgDiff2DSimple(parameter, objects)
+			case "graph":
+				objects = imgGraph(parameter, objects)
+			case "test":
+				//n, e := mp.GetFileNameAndExtsn(objects[2].filename)
+				//fmt.Println(n, " -- ", e)
+				var info commonInfo
+				fmt.Println(info)
+			default:
+				fmt.Println(" wrong command!")
+			}
+		}
 	}
 }
 
+/*
 func main() {
 	var commandsList [][]string
 	help := func() {
@@ -110,6 +141,7 @@ func main() {
 		}
 	}
 }
+*/
 
 func returnFlags(op []string) Flags {
 	var Flag Flags
@@ -194,7 +226,7 @@ func imgInfo(options []string) []commonInfo {
 	return infoList
 }
 
-func imgDiff1D(option []string) {
+func imgDiff1D(option []string, objects []commonInfo) []commonInfo {
 	flag := returnFlags(option)
 	var format string
 	Path, _ := os.Getwd()
@@ -202,22 +234,20 @@ func imgDiff1D(option []string) {
 	if flag.f0 {
 		newFolder = mp.MkDir("1Ddiff")
 	}
-	for _, v := range mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png") {
-		var info commonInfo
-		Name, extsn := mp.GetFileNameAndExtsn(v)
+	for _, v := range objects {
+		Name, extsn := mp.GetFileNameAndExtsn(v.filename)
 		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
 			format = "jpeg"
-		} else if extsn == ".png" {
+		} else if extsn == ".png" || extsn == ".PNG" {
 			format = "png"
 		} else {
 			format = extsn
 			continue
 		}
 
-		info.imageNRGBA = img.ReturnNRGBA(v, format)
-		info.xDiff, info.yDiff = img.ReturnDiffInfo(info.imageNRGBA)
-		info.xDiffSq, info.yDiffSq, info.xDiffSqAver, info.yDiffSqAver = img.ReturnDiffSquareInfo(info.xDiff, info.yDiff)
-
+		v.imageNRGBA = img.ReturnNRGBA(v.filename, format)
+		v.xDiff, v.yDiff = img.ReturnDiffInfo(v.imageNRGBA)
+		v.xDiffSq, v.yDiffSq, v.xDiffSqAver, v.yDiffSqAver = img.ReturnDiffSquareInfo(v.xDiff, v.yDiff)
 		if flag.f0 {
 			xDiffNewName = Path + "\\" + newFolder + "\\" + Name + "_XDIFF" + "."
 			yDiffNewName = Path + "\\" + newFolder + "\\" + Name + "_YDIFF" + "."
@@ -225,24 +255,25 @@ func imgDiff1D(option []string) {
 			xDiffNewName = Name + "_XDIFF" + "."
 			yDiffNewName = Name + "_YDIFF" + "."
 		}
-		img.DrawFromNRGBA(xDiffNewName, format, img.ReturnIrregDiffImg(info.xDiffSq, [][]float64{}, info.xDiffSqAver))
-		img.DrawFromNRGBA(yDiffNewName, format, img.ReturnIrregDiffImg([][]float64{}, info.yDiffSq, info.xDiffSqAver))
+		img.DrawFromNRGBA(xDiffNewName, format, img.ReturnIrregDiffImg(v.xDiffSq, [][]float64{}, v.xDiffSqAver))
+		img.DrawFromNRGBA(yDiffNewName, format, img.ReturnIrregDiffImg([][]float64{}, v.yDiffSq, v.xDiffSqAver))
 
-		fmt.Println(v, " ", Name, " ", format)
+		fmt.Println(v.filename, " ", Name, " ", format)
 		fmt.Println(xDiffNewName, " ", yDiffNewName)
 	}
+	return objects
 }
 
-func imgDiff2D(option []string) {
+func imgDiff2D(option []string, objects []commonInfo) []commonInfo {
 	var format string
 	flag := returnFlags(option)
 	path, _ := os.Getwd()
 	var newPath string
 	if flag.f0 || flag.f1 {
-		newPath = path + "\\" + mp.MkDir("2Ddiff")
+		newPath = path + "\\" + mp.MkDir("2Ddiff") + "\\"
 	}
-	for _, v := range mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png") {
-		name, extsn := mp.GetFileNameAndExtsn(v)
+	for _, v := range objects {
+		name, extsn := mp.GetFileNameAndExtsn(v.filename)
 		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
 			format = "jpeg"
 		} else if extsn == ".png" {
@@ -251,22 +282,32 @@ func imgDiff2D(option []string) {
 			format = extsn
 			continue
 		}
-		xDiff, yDiff := img.ReturnDiffInfo(img.ReturnNRGBA(v, format))
-		xDiffSq, yDiffSq, xAverSq, yAverSq := img.ReturnDiffSquareInfo(xDiff, yDiff)
-		img.DrawFromNRGBA(newPath+"\\"+name+"_graph", format, img.ReturnIrregDiffImg(xDiffSq, yDiffSq, (xAverSq+yAverSq/2.0)))
+		if len(v.xDiff) == 0 || len(v.yDiff) == 0 {
+			fmt.Println(" recycle diff")
+			v.xDiff, v.yDiff = img.ReturnDiffInfo(img.ReturnNRGBA(v.filename, format))
+		}
+		if len(v.xDiffSq) == 0 || len(v.yDiffSq) == 0 || v.xDiffSqAver == 0.0 || v.yDiffSqAver == 0.0 {
+			fmt.Println(" RECYCLE DIFF")
+			v.xDiffSq, v.yDiffSq, v.xDiffSqAver, v.yDiffSqAver = img.ReturnDiffSquareInfo(v.xDiff, v.yDiff)
+		}
+		//v.xDiff, v.yDiff = img.ReturnDiffInfo(img.ReturnNRGBA(v.filename, format))
+		//v.xDiffSq, v.yDiffSq, v.xDiffSqAver, v.yDiffSqAver = img.ReturnDiffSquareInfo(v.xDiff, v.yDiff)
+		img.DrawFromNRGBA(newPath+name+"_graph", format, img.ReturnIrregDiffImg(v.xDiffSq, v.yDiffSq, (v.xDiffSqAver+v.yDiffSqAver/2.0)))
+		fmt.Println(name + "_graph." + format)
 	}
+	return objects
 }
 
-func diff2DSimple(option []string) {
+func imgDiff2DSimple(option []string, objects []commonInfo) []commonInfo {
 	var format string
 	path, _ := os.Getwd()
 	flag := returnFlags(option)
 	var newPath string
 	if flag.f0 || flag.f1 {
-		newPath = path + "\\" + mp.MkDir("2DdiffSimplify")
+		newPath = path + "\\" + mp.MkDir("2DdiffSimplify") + "\\"
 	}
-	for _, v := range mp.GetFilePathNameSlice("jpg", "jpeg", "JPG", "png") {
-		name, extsn := mp.GetFileNameAndExtsn(v)
+	for _, v := range objects {
+		name, extsn := mp.GetFileNameAndExtsn(v.filename)
 		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
 			format = "jpeg"
 		} else if extsn == ".png" {
@@ -275,12 +316,14 @@ func diff2DSimple(option []string) {
 			format = extsn
 			continue
 		}
-		xDiff, yDiff := img.ReturnDiffInfo(img.ReturnNRGBA(v, format))
-		xDiffSq, yDiffSq, xAverSq, yAverSq := img.ReturnDiffSquareInfo(xDiff, yDiff)
-		averSq := (xAverSq + yAverSq) / 2.0
-		xDiffSqSimple, yDiffSqSimple := img.ReturnSimplify(xDiffSq, averSq), img.ReturnSimplify(yDiffSq, averSq)
-		img.DrawFromNRGBA(newPath+"\\"+name+"_graph", format, img.ReturnIrregDiffImg(xDiffSqSimple, yDiffSqSimple, averSq))
+		v.xDiff, v.yDiff = img.ReturnDiffInfo(img.ReturnNRGBA(v.filename, format))
+		v.xDiffSq, v.yDiffSq, v.xDiffSqAver, v.yDiffSqAver = img.ReturnDiffSquareInfo(v.xDiff, v.yDiff)
+		averSq := (v.xDiffSqAver + v.yDiffSqAver) / 2.0
+		xDiffSqSimple, yDiffSqSimple := img.ReturnSimplify(v.xDiffSq, averSq), img.ReturnSimplify(v.yDiffSq, averSq)
+		img.DrawFromNRGBA(newPath+name+"_graph", format, img.ReturnIrregDiffImg(xDiffSqSimple, yDiffSqSimple, averSq))
+		fmt.Println(name + "_graph." + format)
 	}
+	return objects
 }
 
 func imgNum(extsn ...string) {
@@ -291,33 +334,33 @@ func imgNum(extsn ...string) {
 	mp.FileNumbering(names)
 }
 
-func imgGraph(option []string) {
+func imgGraph(option []string, objects []commonInfo) []commonInfo {
 	var newName, np string
 	flag := returnFlags(option)
 	cp, _ := os.Getwd()
 	if flag.f0 || flag.f1 {
 		np = cp + "\\" + mp.MkDir("GraphImg")
 	}
-	for _, EXTSN := range []string{"png", "jpg"} {
-		var EXTSN2 string
-		if EXTSN == "jpg" || EXTSN == "jpeg" || EXTSN == "JPG" {
-			EXTSN2 = "jpeg"
-		} else if EXTSN == "png" {
-			EXTSN2 = "png"
+	for _, v := range objects {
+		var EXTSN string
+		name, extsn := mp.GetFileNameAndExtsn(v.filename)
+		if extsn == ".jpg" || extsn == ".jpeg" || extsn == ".JPG" {
+			EXTSN = "jpeg"
+		} else if extsn == ".png" {
+			EXTSN = "png"
 		}
-		for _, v := range mp.GetFilePathNameSlice(EXTSN) {
-			nameAndExtsn := fp.Base(v)
-			fmt.Println("NameAndExtsn : ", nameAndExtsn)
-			RG, GB, RB := img.MakeGraphBlueprint(nameAndExtsn, img.GetRGBAInfo(nameAndExtsn, EXTSN2))
-			name, _ := mp.GetFileNameAndExtsn(nameAndExtsn)
-			if flag.f0 || flag.f1 {
-				newName = np + "\\" + name
-			} else {
-				newName = name
-			}
-			img.DrawFromNRGBA(newName+"_RGgraph", EXTSN2, RG)
-			img.DrawFromNRGBA(newName+"_GBgraph", EXTSN2, GB)
-			img.DrawFromNRGBA(newName+"_RBgraph", EXTSN2, RB)
+		nameAndExtsn := fp.Base(v.filename)
+		//fmt.Println("NameAndExtsn : ", nameAndExtsn)
+		RG, GB, RB := img.MakeGraphBlueprint(nameAndExtsn, img.GetRGBAInfo(nameAndExtsn, EXTSN))
+		//name, _ := mp.GetFileNameAndExtsn(nameAndExtsn)
+		if flag.f0 || flag.f1 {
+			newName = np + "\\" + name
+		} else {
+			newName = name
 		}
+		img.DrawFromNRGBA(newName+"_RGgraph", EXTSN, RG)
+		img.DrawFromNRGBA(newName+"_GBgraph", EXTSN, GB)
+		img.DrawFromNRGBA(newName+"_RBgraph", EXTSN, RB)
 	}
+	return objects
 }
