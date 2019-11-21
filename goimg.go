@@ -34,6 +34,7 @@ type Flags struct {
 	f1 bool //new folder, origin file
 }
 
+//with pipe
 func main() {
 
 	var commandsList [][]string
@@ -79,6 +80,8 @@ func main() {
 				objects = imgDiff2DSimple(parameter, objects)
 			case "graph":
 				objects = imgGraph(parameter, objects)
+			case "j2p":
+				objects = imgJ2P(parameter, objects)
 			case "test":
 				//n, e := mp.GetFileNameAndExtsn(objects[2].filename)
 				//fmt.Println(n, " -- ", e)
@@ -335,7 +338,7 @@ func imgNum(extsn ...string) {
 }
 
 func imgGraph(option []string, objects []commonInfo) []commonInfo {
-	var newName, np string
+	var np, newName string
 	flag := returnFlags(option)
 	cp, _ := os.Getwd()
 	if flag.f0 || flag.f1 {
@@ -350,9 +353,7 @@ func imgGraph(option []string, objects []commonInfo) []commonInfo {
 			EXTSN = "png"
 		}
 		nameAndExtsn := fp.Base(v.filename)
-		//fmt.Println("NameAndExtsn : ", nameAndExtsn)
 		RG, GB, RB := img.MakeGraphBlueprint(nameAndExtsn, img.GetRGBAInfo(nameAndExtsn, EXTSN))
-		//name, _ := mp.GetFileNameAndExtsn(nameAndExtsn)
 		if flag.f0 || flag.f1 {
 			newName = np + "\\" + name
 		} else {
@@ -361,6 +362,49 @@ func imgGraph(option []string, objects []commonInfo) []commonInfo {
 		img.DrawFromNRGBA(newName+"_RGgraph", EXTSN, RG)
 		img.DrawFromNRGBA(newName+"_GBgraph", EXTSN, GB)
 		img.DrawFromNRGBA(newName+"_RBgraph", EXTSN, RB)
+	}
+	return objects
+}
+
+func imgJ2P(option []string, objects []commonInfo) []commonInfo {
+	return commonIter(option, objects, metaJ2P, "J2Pfolder")
+}
+
+func metaJ2P() func(string, string, string) {
+	temp := func(nameNoPointExtsn string, extsnWithPoint string, newNameNoPointExtsn string) {
+		var delegateExtsn string
+		if extsnWithPoint == ".jpg" || extsnWithPoint == ".jpeg" || extsnWithPoint == ".JPG" {
+			delegateExtsn = "jpeg"
+		} else if extsnWithPoint == ".png" || extsnWithPoint == ".PNG" {
+			delegateExtsn = "png"
+		}
+		var newNRGBA *image.NRGBA
+		if delegateExtsn == "png" {
+			newNRGBA = img.ReturnNRGBA(nameNoPointExtsn+extsnWithPoint, delegateExtsn)
+		} else if delegateExtsn == "jpeg" {
+			newNRGBA = img.ReturnNRGBA(nameNoPointExtsn+extsnWithPoint, delegateExtsn)
+		}
+		img.DrawFromNRGBA(newNameNoPointExtsn, "png", newNRGBA)
+	}
+	return temp
+}
+
+func commonIter(option []string, objects []commonInfo, fn func() func(string, string, string), folderName string) []commonInfo {
+	var newPath, newNameNoPointExtsn string
+	flag := returnFlags(option)
+	cp, _ := os.Getwd()
+	if flag.f0 || flag.f1 {
+		newPath = cp + "\\" + mp.MkDir(folderName) + "\\"
+	}
+	for _, v := range objects {
+		nameNoPointExtsn, extsnWithPoint := mp.GetFileNameAndExtsn(v.filename)
+
+		if flag.f0 || flag.f1 {
+			newNameNoPointExtsn = newPath + nameNoPointExtsn
+		} else {
+			newNameNoPointExtsn = nameNoPointExtsn
+		}
+		fn()(nameNoPointExtsn, extsnWithPoint, newNameNoPointExtsn)
 	}
 	return objects
 }
