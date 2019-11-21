@@ -1,6 +1,7 @@
 package myimage
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -256,18 +257,18 @@ func GetIrregDiff(D [][]float64, Threshold float64) [][]float64 {
 }
 
 //DrawFromNRGBA :
-func DrawFromNRGBA(name, extsn string, info *image.NRGBA) {
-	nameAndExtsn := name + "." + extsn
-	f, ferr := os.Create(nameAndExtsn)
+func DrawFromNRGBA(nameNoPointExtsn, extsnNoPoint string, info *image.NRGBA) {
+	namePointExtsn := nameNoPointExtsn + "." + extsnNoPoint
+	f, ferr := os.Create(namePointExtsn)
 	if ferr != nil {
 		panic(ferr)
 	}
-	if extsn == "jpeg" {
+	if extsnNoPoint == "jpeg" {
 		jpegOption := jpeg.Options{
 			Quality: 100,
 		}
 		jpeg.Encode(f, info, &jpegOption)
-	} else if extsn == "png" {
+	} else if extsnNoPoint == "png" {
 		png.Encode(f, info)
 	}
 }
@@ -427,31 +428,6 @@ func MakeImgFromYIrreg(Irreg [][]float64) [][]ImgInfo {
 
 //MakeGraphBlueprint :
 func MakeGraphBlueprint(fn string, info [][]ImgInfo) (*image.NRGBA, *image.NRGBA, *image.NRGBA) {
-	//path, _ := os.Getwd()
-	/*
-		name, extsn := mp.GetFileNameAndExtsn(fn)
-		fmt.Println("name : ", name)
-		fmt.Println("extsn : ", extsn)
-		newNameRG := name + "_RG_graph" + extsn
-		newNameGB := name + "_GB_graph" + extsn
-		newNameRB := name + "_RB_graph" + extsn
-
-			fRG, errRG := os.Create(newNameRG)
-			if errRG != nil {
-				panic(errRG)
-			}
-			defer fRG.Close()
-			fGB, errGB := os.Create(newNameGB)
-			if errGB != nil {
-				panic(errGB)
-			}
-			defer fGB.Close()
-			fRB, errRB := os.Create(newNameRB)
-			if errRB != nil {
-				panic(errRB)
-			}
-			defer fRB.Close()
-	*/
 
 	RGgraph := image.NewNRGBA(image.Rect(0, 0, 255, 255))
 	for i := 0; i < 256; i++ {
@@ -516,6 +492,7 @@ func MakeGraphBlueprint(fn string, info [][]ImgInfo) (*image.NRGBA, *image.NRGBA
 func ReturnNRGBA(fn, fm string) *image.NRGBA {
 	f, fErr := os.Open(fn)
 	if fErr != nil {
+		log.Fatal(errors.New("ReturnNRGBA can't open file"))
 		log.Fatal(fErr)
 	}
 	defer f.Close()
