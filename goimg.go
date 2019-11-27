@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/jpeg"
+	"image/png"
+	mg "mygraph"
 	img "myimage"
 	mp "mypath"
 	"os"
@@ -203,6 +206,79 @@ func imgJ2P(option []string, objects []commonInfo) []commonInfo {
 		}
 		img.DrawFromNRGBA(newNameNoPointExtsn, "png", newNRGBA)
 		info.imageNRGBA = newNRGBA
+		return info
+	}
+	fn := fEnum{nil, f}
+	return commonIter(option, objects, fn, "J2Pfolder")
+}
+
+func imgRGBgraph(option []string, objects []commonInfo) []commonInfo {
+	f := func(object commonInfo, nameNoPointExtsn string, extsnWithPoint string, deleExtsn string, newNameNoPointExtsn string) commonInfo {
+		var info commonInfo
+		f, ferr := os.Open(nameNoPointExtsn + extsnWithPoint)
+		if ferr != nil {
+			panic(ferr)
+		}
+		var imgImg image.Image
+		var ierr error
+		if deleExtsn == "png" {
+			imgImg, ierr = png.Decode(f)
+		} else if deleExtsn == "jpeg" {
+			imgImg, ierr = jpeg.Decode(f)
+		}
+		if ierr != nil {
+			panic(ierr)
+		}
+		pixelInfo := img.ReturnPixelInfo(imgImg)
+		flat := func(data [][]img.ImgInfo) []img.ImgInfo {
+			var flat []img.ImgInfo
+			for _, v := range data {
+				flat = append(flat, v...)
+			}
+			return flat
+		}(pixelInfo)
+		pixel := func(pData []img.ImgInfo) {
+			var RTable, GTable, BTable []mg.DataInt
+			var Rcheck, Gcheck, Bcheck = false, false, false
+			for _, v := range pData {
+				for _, Rv := range RTable {
+					if Rv.V1 == v.R {
+						Rv.V2++
+						Rcheck = true
+						break
+					}
+				}
+				if Rcheck == false {
+					RTable = append(RTable, mg.DataInt{V1: v.R, V2: 1})
+				}
+				Rcheck = false
+				for _, Gv := range GTable {
+					if Gv.V1 == v.G {
+						Gv.V2++
+						Gcheck = true
+						break
+					}
+				}
+				if Gcheck == false {
+					GTable = append(GTable, mg.DataInt{V1: v.G, V2: 1})
+				}
+				Gcheck = false
+				for _, Bv := range BTable {
+					if Bv.V1 == v.B {
+						Bv.V2++
+						Bcheck = true
+						break
+					}
+				}
+				if Bcheck == false {
+					BTable = append(BTable, mg.DataInt{V1: v.B, V2: 1})
+				}
+				Bcheck = false
+			}
+		}
+		pixel(flat)
+		fmt.Println(flat)
+
 		return info
 	}
 	fn := fEnum{nil, f}
