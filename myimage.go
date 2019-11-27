@@ -107,6 +107,7 @@ func GetImgTint(fn, fe string) (float64, float64, float64) {
 	}
 	if imgErr != nil {
 		fmt.Println("img Err")
+
 		log.Fatal(imgErr)
 
 	}
@@ -517,6 +518,23 @@ func ReturnNRGBA(fn, fm string) *image.NRGBA {
 		}
 	}
 	return NRGBA
+}
+
+//ReturnPixelInfo :
+func ReturnPixelInfo(imgInfo image.Image) [][]ImgInfo {
+	var pixelInfo [][]ImgInfo
+	xSize, ySize := imgInfo.Bounds().Max.X, imgInfo.Bounds().Max.Y
+	for j := 0; j < ySize; j++ {
+		var pixels []ImgInfo
+		for i := 0; i < xSize; i++ {
+			var pixel ImgInfo
+			R, G, B, A := imgInfo.At(i, j).RGBA()
+			pixel.R, pixel.G, pixel.B, pixel.A = (int)(R), (int)(G), (int)(B), (int)(A)
+			pixels = append(pixels, pixel)
+		}
+		pixelInfo = append(pixelInfo, pixels)
+	}
+	return pixelInfo
 }
 
 //ReturnRGBAAverage : get Average RGBA information from [][]ImgInfo structure
